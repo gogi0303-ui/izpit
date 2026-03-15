@@ -10,9 +10,12 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import { Camera } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
+import * as ImagePicker from 'expo-image-picker';
 import { createRecipe, updateRecipe } from '../services/recipeService';
 
 const CUISINES = ['Italian', 'Asian', 'Mexican', 'Mediterranean', 'American', 'French', 'Indian', 'Other'];
@@ -30,6 +33,7 @@ export default function AddRecipeScreen({ route, navigation }) {
   const [servings, setServings] = useState('2');
   const [cuisine, setCuisine] = useState('Italian');
   const [category, setCategory] = useState(defaultCategory);
+  const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -43,6 +47,7 @@ export default function AddRecipeScreen({ route, navigation }) {
       setServings(String(editingRecipe.servings || 2));
       setCuisine(editingRecipe.cuisine || 'Italian');
       setCategory(editingRecipe.category || defaultCategory);
+      if (editingRecipe.image) setImage(editingRecipe.image);
     }
   }, [editingRecipe]);
 
@@ -51,6 +56,45 @@ export default function AddRecipeScreen({ route, navigation }) {
       title: isEditing ? 'Edit Recipe' : 'Add Recipe',
     });
   }, [isEditing]);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Camera permission is required to take photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const handlePickImage = () => {
+    Alert.alert('Add Photo', 'Choose an option', [
+      { text: 'Camera', onPress: takePhoto },
+      { text: 'Gallery', onPress: pickImage },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const validate = () => {
     const newErrors = {};
@@ -89,6 +133,7 @@ export default function AddRecipeScreen({ route, navigation }) {
         servings: Number(servings),
         cuisine,
         category,
+        image: image || null,
       };
 
       if (isEditing) {
@@ -115,6 +160,17 @@ export default function AddRecipeScreen({ route, navigation }) {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
+        <TouchableOpacity style={styles.imagePickerButton} onPress={handlePickImage}>
+          {image ? (
+            <Image source={{ uri: image }} style={styles.imagePreview} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Camera size={36} color="#999" />
+              <Text style={styles.imagePlaceholderText}>Add Photo</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Title *</Text>
           <TextInput
@@ -314,6 +370,31 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 50,
+  },
+  imagePickerButton: {
+    marginBottom: 18,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: 150,
+    backgroundColor: '#f0e6e0',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+  },
+  imagePlaceholderText: {
+    color: '#999',
+    fontSize: 14,
   },
   submitButton: {
     backgroundColor: '#E85D3A',
