@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Camera } from 'lucide-react-native';
-import { Picker } from '@react-native-picker/picker';
+
 import * as ImagePicker from 'expo-image-picker';
 import { createRecipe, updateRecipe } from '../services/recipeService';
 
@@ -243,48 +243,52 @@ export default function AddRecipeScreen({ route, navigation }) {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Difficulty</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={difficulty}
-              onValueChange={setDifficulty}
-              style={styles.picker}
-            >
-              <Picker.Item label="Easy" value="Easy" />
-              <Picker.Item label="Medium" value="Medium" />
-              <Picker.Item label="Hard" value="Hard" />
-            </Picker>
+          <View style={styles.buttonRow}>
+            {['Easy', 'Medium', 'Hard'].map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={[styles.optionButton, difficulty === level && styles.optionButtonActive]}
+                onPress={() => setDifficulty(level)}
+              >
+                <Text style={[styles.optionText, difficulty === level && styles.optionTextActive]}>
+                  {level}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Cuisine</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={cuisine}
-              onValueChange={setCuisine}
-              style={styles.picker}
-            >
-              {CUISINES.map((c) => (
-                <Picker.Item key={c} label={c} value={c} />
-              ))}
-            </Picker>
+          <View style={styles.cuisineGrid}>
+            {CUISINES.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[styles.optionButton, cuisine === c && styles.optionButtonActive]}
+                onPress={() => setCuisine(c)}
+              >
+                <Text style={[styles.optionText, cuisine === c && styles.optionTextActive]}>
+                  {c}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Category</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={category}
-              onValueChange={setCategory}
-              style={styles.picker}
-            >
-              <Picker.Item label="Breakfast" value="Breakfast" />
-              <Picker.Item label="Lunch" value="Lunch" />
-              <Picker.Item label="Dinner" value="Dinner" />
-              <Picker.Item label="Desserts" value="Desserts" />
-              <Picker.Item label="Snacks" value="Snacks" />
-            </Picker>
+          <View style={styles.cuisineGrid}>
+            {['Breakfast', 'Lunch', 'Dinner', 'Desserts', 'Snacks'].map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.optionButton, category === cat && styles.optionButtonActive]}
+                onPress={() => setCategory(cat)}
+              >
+                <Text style={[styles.optionText, category === cat && styles.optionTextActive]}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -361,15 +365,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
-  pickerWrapper: {
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  cuisineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 10,
     backgroundColor: '#f9f9f9',
-    overflow: 'hidden',
   },
-  picker: {
-    height: 50,
+  optionButtonActive: {
+    backgroundColor: '#E85D3A',
+    borderColor: '#E85D3A',
+  },
+  optionText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  optionTextActive: {
+    color: '#fff',
+    fontWeight: '600',
   },
   imagePickerButton: {
     marginBottom: 18,
@@ -391,6 +414,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     borderStyle: 'dashed',
+  },
+  imagePlaceholderIcon: {
+    fontSize: 36,
+    marginBottom: 6,
   },
   imagePlaceholderText: {
     color: '#999',
