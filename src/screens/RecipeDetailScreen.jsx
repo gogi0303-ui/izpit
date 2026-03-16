@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,39 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { Clock, Gauge, Users, Pencil, Trash2, UtensilsCrossed } from 'lucide-react-native';
+import { Clock, Gauge, Users, Timer, StopCircle, Pencil, Trash2, UtensilsCrossed } from 'lucide-react-native';
+import * as Notifications from 'expo-notifications';
+import * as Haptics from 'expo-haptics';
 import { getRecipeById, deleteRecipe } from '../services/recipeService';
+
+// so notifications show up when the app is open
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function RecipeDetailScreen({ route, navigation }) {
   const { recipeId } = route.params;
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     loadRecipe();
   }, [recipeId]);
+
+  // cleanup timer when leaving screen
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const loadRecipe = async () => {
     try {
@@ -58,6 +79,61 @@ export default function RecipeDetailScreen({ route, navigation }) {
         },
       ]
     );
+  };
+
+  const startTimer = async () => {
+    // ask for notification permissions
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'We need notification permissions to alert you when the timer is done.');
+    }
+
+    const seconds = recipe.cookTime * 60;
+    setTimeLeft(seconds);
+    setTimerRunning(true);
+
+    // haptic when starting
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+          setTimerRunning(false);
+
+          // haptic when done
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+          // send notification
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: 'Timer Done!',
+              body: `Your ${recipe.title} is ready!`,
+            },
+            trigger: null, // send immediately
+          });
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setTimerRunning(false);
+    setTimeLeft(null);
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   if (loading) {
@@ -112,6 +188,27 @@ export default function RecipeDetailScreen({ route, navigation }) {
             <Text style={styles.cuisineText}>{recipe.cuisine}</Text>
           </View>
         ) : null}
+
+        {/* Timer section */}
+        <View style={styles.timerSection}>
+          {timeLeft !== null && timeLeft > 0 ? (
+            <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+          ) : timeLeft === 0 ? (
+            <Text style={styles.timerDone}>Done!</Text>
+          ) : null}
+
+          {!timerRunning ? (
+            <TouchableOpacity style={styles.timerButton} onPress={startTimer}>
+              <Timer size={20} color="#fff" />
+              <Text style={styles.timerButtonText}>Start Timer ({recipe.cookTime} min)</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.stopButton} onPress={stopTimer}>
+              <StopCircle size={20} color="#fff" />
+              <Text style={styles.timerButtonText}>Stop Timer</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         <Text style={styles.sectionTitle}>Ingredients</Text>
         <Text style={styles.bodyText}>{recipe.ingredients}</Text>
@@ -195,6 +292,49 @@ const styles = StyleSheet.create({
   cuisineText: {
     fontSize: 13,
     color: '#E85D3A',
+    fontWeight: '600',
+  },
+  timerSection: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 8,
+  },
+  timerText: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    color: '#E85D3A',
+    marginBottom: 12,
+  },
+  timerDone: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    marginBottom: 12,
+  },
+  timerButton: {
+    flexDirection: 'row',
+    backgroundColor: '#E85D3A',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignItems: 'center',
+    gap: 8,
+  },
+  stopButton: {
+    flexDirection: 'row',
+    backgroundColor: '#e74c3c',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignItems: 'center',
+    gap: 8,
+  },
+  timerButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   sectionTitle: {
