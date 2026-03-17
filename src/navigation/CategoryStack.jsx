@@ -1,7 +1,8 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Plus } from 'lucide-react-native';
+import { Plus, LogOut } from 'lucide-react-native';
+import { useAuth } from '../context/AuthContext';
 import RecipeListScreen from '../screens/RecipeListScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import AddRecipeScreen from '../screens/AddRecipeScreen';
@@ -9,6 +10,8 @@ import AddRecipeScreen from '../screens/AddRecipeScreen';
 const Stack = createNativeStackNavigator();
 
 export default function CategoryStack({ category }) {
+  const { logout } = useAuth();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -24,6 +27,14 @@ export default function CategoryStack({ category }) {
         initialParams={{ category }}
         options={({ navigation }) => ({
           title: category,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={logout}
+              style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <LogOut size={22} color="#fff" />
+            </TouchableOpacity>
+          ),
           headerRight: () => (
             <TouchableOpacity
               onPress={() => navigation.navigate('AddRecipe', { category })}
